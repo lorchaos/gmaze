@@ -1,0 +1,95 @@
+package parser
+
+import (
+	"io"
+	)
+
+type Peer {
+	id string
+
+}
+type Peer struct {
+
+  conn net.Conn
+  ch chan string
+
+}
+
+func (peer *Peer) reply(msg string) {
+
+  fmt.Fprintf(peer.conn, "%s\n", msg)
+  
+}
+
+func (peer *Peer) close() {
+
+  close(peer.ch)
+  peer.conn.Close() 
+} 
+
+func (peer *Peer) read (serverChan chan *Message) {
+
+  reader := bufio.NewReader(peer.conn)
+
+  for {
+    
+    read, err := reader.ReadString('\n')
+		
+    if(err != nil) {
+
+	fmt.Printf("Error reading from peer\n");
+        break
+    }
+    serverChan <- &Message{from: peer, payload:read}
+  }
+}
+  
+func buildPeer(conn net.Conn) *Peer {
+
+  fmt.Printf("Connected to %s \n", conn.RemoteAddr())
+
+  return &Peer{conn: conn, ch: make(chan string)}
+}
+
+func procServer(ch chan *Message) {
+
+  for {
+
+    select {
+
+      case in := <- ch:
+        fmt.Printf("Got from client [%s]\n", in.payload)
+        in.from.reply("OK")
+    }
+  }
+
+}
+
+func StartClientServer() {
+
+	ln, err := net.Listen("tcp", ":9099")
+  	if err != nil {
+    		// handle error
+  	}
+
+  	peers := [] *Peer{}
+
+  	stringerverChan := make(chan *Message)	
+
+  	go procServer(serverChan, peers)
+
+  	for {
+    	conn, err := ln.Accept()
+      	if err != nil {
+		
+		// handle error
+      	}
+      	peer := buildPeer(conn)
+      	go peer.read(serverChan)
+      	peers = append(peers, peer)
+      	fmt.Printf("Connected peers: %d\n", len(peers)) 
+  	} 
+	
+}
+
+

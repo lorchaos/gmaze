@@ -1,4 +1,4 @@
-package gmaze
+package parser
 
 import ("testing")
 
